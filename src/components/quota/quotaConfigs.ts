@@ -28,6 +28,9 @@ import type {
   GeminiCliUserTier,
   KimiQuotaRow,
   KimiQuotaState,
+  KiroQuotaRow,
+  KiroQuotaState,
+  KiroUsagePayload,
 } from '@/types';
 import { apiCallApi, authFilesApi, getApiCallErrorMessage } from '@/services/api';
 import { useQuotaStore } from '@/stores';
@@ -45,6 +48,8 @@ import {
   GEMINI_CLI_REQUEST_HEADERS,
   KIMI_USAGE_URL,
   KIMI_REQUEST_HEADERS,
+  KIRO_USAGE_URL,
+  KIRO_REQUEST_HEADERS,
   normalizeGeminiCliModelId,
   normalizeNumberValue,
   normalizePlanType,
@@ -73,6 +78,7 @@ import {
   isDisabledAuthFile,
   isGeminiCliFile,
   isKimiFile,
+  isKiroFile,
   isRuntimeOnlyAuthFile,
 } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/authIndex';
@@ -81,7 +87,7 @@ import styles from '@/pages/QuotaPage.module.scss';
 
 type QuotaUpdater<T> = T | ((prev: T) => T);
 
-type QuotaType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi';
+type QuotaType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi' | 'kiro';
 export type QuotaSortMode = 'default' | 'name-asc' | 'plan-desc' | 'plan-asc';
 
 const DEFAULT_ANTIGRAVITY_PROJECT_ID = 'bamboo-precept-lgxtn';
@@ -99,11 +105,13 @@ export interface QuotaStore {
   codexQuota: Record<string, CodexQuotaState>;
   geminiCliQuota: Record<string, GeminiCliQuotaState>;
   kimiQuota: Record<string, KimiQuotaState>;
+  kiroQuota: Record<string, KiroQuotaState>;
   setAntigravityQuota: (updater: QuotaUpdater<Record<string, AntigravityQuotaState>>) => void;
   setClaudeQuota: (updater: QuotaUpdater<Record<string, ClaudeQuotaState>>) => void;
   setCodexQuota: (updater: QuotaUpdater<Record<string, CodexQuotaState>>) => void;
   setGeminiCliQuota: (updater: QuotaUpdater<Record<string, GeminiCliQuotaState>>) => void;
   setKimiQuota: (updater: QuotaUpdater<Record<string, KimiQuotaState>>) => void;
+  setKiroQuota: (updater: QuotaUpdater<Record<string, KiroQuotaState>>) => void;
   clearQuotaCache: () => void;
 }
 
@@ -1383,4 +1391,248 @@ export const KIMI_CONFIG: QuotaConfig<KimiQuotaState, KimiQuotaRow[]> = {
   controlClassName: styles.kimiControl,
   gridClassName: styles.kimiGrid,
   renderQuotaItems: renderKimiItems,
+};
+
+const parseKiroUsagePayload = (payload: unknown): KiroUsagePayload | null => {
+  if (payload === undefined || payload === null) return null;
+  if (typeof payload === 'string') {
+    const trimmed = payload.trim();
+    if (!trimmed) return null;
+    try {
+      return JSON.parse(trimmed) as KiroUsagePayload;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof payload === 'object') {
+    return payload as KiroUsagePayload;
+  }
+  return null;
+};
+
+const resolveKiroPlanType = (payload: KiroUsagePayload): string | null => {
+  const title = payload.subscriptionInfo?.subscriptionTitle;
+  if (!title) return null;
+  return title;
+};
+
+const buildKiroQuotaRows = (payload: KiroUsagePayload): KiroQuotaRow[] => {
+  const breakdowns = payload.usageBreakdownList;
+  if (!Array.isArray(breakdowns) || breakdowns.length === 0) return [];
+
+  return breakdowns.map((item, index) => {
+    const currentUsage = item.currentUsageWithPrecision ?? item.currentUsage ?? 0;
+    const usageLimit = item.usageLimitWithPrecision ?? item.usageLimit ?? 0;
+    const overageCap = item.overageCapWithPrecision ?? item.overageCap ?? 0;
+    const overageRate = item.overageRate ?? 0;
+    const overageCharges = item.overageCharges ?? 0;
+    const currentOverages = item.currentOveragesWithPrecision ?? item.currentOverages ?? 0;
+    const nextDateReset = item.nextDateReset ?? payload.nextDateReset;
+    const label = item.displayName || item.resourceType || `Resource #${index + 1}`;
+
+    return {
+      id: `kiro-${item.resourceType?.toLowerCase() ?? index}`,
+      label,
+      currentUsage: Number(currentUsage),
+      usageLimit: Number(usageLimit),
+      overageCap: Number(overageCap),
+      overageRate: Number(overageRate),
+      overageCharges: Number(overageCharges),
+      currentOverages: Number(currentOverages),
+      nextDateReset: nextDateReset ? Number(nextDateReset) : undefined,
+      resourceType: item.resourceType,
+      unit: item.unit,
+    };
+  });
+};
+
+const fetchKiroQuota = async (
+  file: AuthFileItem,
+  t: TFunction
+): Promise<{ planType: string | null; overageEnabled: boolean; rows: KiroQuotaRow[] }> => {
+  const rawAuthIndex = file['auth_index'] ?? file.authIndex;
+  const authIndex = normalizeAuthIndex(rawAuthIndex);
+  if (!authIndex) {
+    throw new Error(t('kiro_quota.missing_auth_index'));
+  }
+
+  const result = await apiCallApi.request({
+    authIndex,
+    method: 'POST',
+    url: KIRO_USAGE_URL,
+    header: { ...KIRO_REQUEST_HEADERS },
+    data: JSON.stringify({ origin: 'AI_EDITOR', resourceType: 'AGENTIC_REQUEST' }),
+  });
+
+  if (result.statusCode < 200 || result.statusCode >= 300) {
+    throw createStatusError(getApiCallErrorMessage(result), result.statusCode);
+  }
+
+  const payload = parseKiroUsagePayload(result.body ?? result.bodyText);
+  if (!payload) {
+    throw new Error(t('kiro_quota.empty_data'));
+  }
+
+  const planType = resolveKiroPlanType(payload);
+  const overageEnabled = payload.overageConfiguration?.overageStatus === 'ENABLED';
+  const rows = buildKiroQuotaRows(payload);
+
+  return { planType, overageEnabled, rows };
+};
+
+const formatKiroResetTime = (timestamp?: number): string => {
+  if (!timestamp) return '-';
+  const resetDate = new Date(timestamp * 1000);
+  const now = new Date();
+  const diffMs = resetDate.getTime() - now.getTime();
+  if (diffMs <= 0) return '-';
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 1) {
+    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+    return `${diffHours}h`;
+  }
+  return `${diffDays}d`;
+};
+
+const KIRO_PLAN_SORT_RANKS: Record<string, number> = {
+  'KIRO PRO': 50,
+  'KIRO POWER': 40,
+  'KIRO FREE': 10,
+};
+
+const getKiroPlanSortRank = (_file: AuthFileItem, quota?: KiroQuotaState): number | null => {
+  const planType = quota?.planType;
+  if (!planType) return null;
+  return KIRO_PLAN_SORT_RANKS[planType.toUpperCase()] ?? 0;
+};
+
+const renderKiroItems = (
+  quota: KiroQuotaState,
+  t: TFunction,
+  helpers: QuotaRenderHelpers
+): ReactNode => {
+  const { styles: styleMap, QuotaProgressBar } = helpers;
+  const { createElement: h, Fragment } = React;
+  const rows = quota.rows ?? [];
+  const planType = quota.planType ?? null;
+  const overageEnabled = quota.overageEnabled ?? false;
+  const nodes: ReactNode[] = [];
+
+  if (planType) {
+    const isPremium = planType.toUpperCase().includes('PRO') || planType.toUpperCase().includes('POWER');
+    const valueClass = isPremium ? styleMap.premiumPlanValue : styleMap.codexPlanValue;
+    nodes.push(
+      h(
+        'div',
+        { key: 'plan', className: styleMap.codexPlan },
+        h('span', { className: styleMap.codexPlanLabel }, t('kiro_quota.plan_label')),
+        h('span', { className: valueClass }, planType)
+      )
+    );
+  }
+
+  if (rows.length === 0) {
+    nodes.push(
+      h('div', { key: 'empty', className: styleMap.quotaMessage }, t('kiro_quota.empty_data'))
+    );
+    return h(Fragment, null, ...nodes);
+  }
+
+  nodes.push(
+    ...rows.map((row) => {
+      const limit = row.usageLimit;
+      const used = row.currentUsage;
+      const remaining = limit > 0
+        ? Math.max(0, Math.min(100, Math.round(((limit - used) / limit) * 100)))
+        : used > 0 ? 0 : null;
+      const percentLabel = remaining === null ? '--' : `${remaining}%`;
+      const resetLabel = formatKiroResetTime(row.nextDateReset);
+      const usageLabel = `${used.toFixed(1)} / ${limit.toFixed(0)}`;
+
+      const rowNodes: ReactNode[] = [
+        h(
+          'div',
+          { key: `${row.id}-main`, className: styleMap.quotaRow },
+          h(
+            'div',
+            { className: styleMap.quotaRowHeader },
+            h('span', { className: styleMap.quotaModel }, row.label),
+            h(
+              'div',
+              { className: styleMap.quotaMeta },
+              h('span', { className: styleMap.quotaPercent }, percentLabel),
+              h('span', { className: styleMap.quotaAmount }, usageLabel),
+              h('span', { className: styleMap.quotaReset }, resetLabel)
+            )
+          ),
+          h(QuotaProgressBar, {
+            percent: remaining,
+            highThreshold: QUOTA_PROGRESS_HIGH_THRESHOLD,
+            mediumThreshold: QUOTA_PROGRESS_MEDIUM_THRESHOLD,
+          })
+        ),
+      ];
+
+      if (overageEnabled && row.overageRate > 0) {
+        rowNodes.push(
+          h(
+            'div',
+            { key: `${row.id}-overage`, className: styleMap.quotaRow },
+            h(
+              'div',
+              { className: styleMap.quotaRowHeader },
+              h('span', { className: styleMap.quotaModel }, t('kiro_quota.overage_label')),
+              h(
+                'div',
+                { className: styleMap.quotaMeta },
+                h('span', { className: styleMap.quotaAmount },
+                  t('kiro_quota.overage_info', {
+                    charges: row.overageCharges.toFixed(2),
+                    rate: row.overageRate,
+                    cap: row.overageCap,
+                  })
+                )
+              )
+            )
+          )
+        );
+      }
+
+      return h(Fragment, { key: row.id }, ...rowNodes);
+    })
+  );
+
+  return h(Fragment, null, ...nodes);
+};
+
+export const KIRO_CONFIG: QuotaConfig<
+  KiroQuotaState,
+  { planType: string | null; overageEnabled: boolean; rows: KiroQuotaRow[] }
+> = {
+  type: 'kiro',
+  i18nPrefix: 'kiro_quota',
+  cardIdleMessageKey: 'quota_management.card_idle_hint',
+  filterFn: (file) => isKiroFile(file) && !isDisabledAuthFile(file),
+  fetchQuota: fetchKiroQuota,
+  storeSelector: (state) => state.kiroQuota,
+  storeSetter: 'setKiroQuota',
+  buildLoadingState: () => ({ status: 'loading', rows: [] }),
+  buildSuccessState: (data) => ({
+    status: 'success',
+    rows: data.rows,
+    planType: data.planType,
+    overageEnabled: data.overageEnabled,
+  }),
+  buildErrorState: (message, status) => ({
+    status: 'error',
+    rows: [],
+    error: message,
+    errorStatus: status,
+  }),
+  cardClassName: styles.kiroCard,
+  controlsClassName: styles.kiroControls,
+  controlClassName: styles.kiroControl,
+  gridClassName: styles.kiroGrid,
+  getPlanSortRank: getKiroPlanSortRank,
+  renderQuotaItems: renderKiroItems,
 };

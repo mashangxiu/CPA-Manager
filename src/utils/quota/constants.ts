@@ -46,6 +46,10 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
     light: { bg: '#f5e3fc', text: '#9025c8' },
     dark: { bg: '#521490', text: '#d49cf5' },
   },
+  kiro: {
+    light: { bg: '#e3f5ed', text: '#1a7a4c' },
+    dark: { bg: '#14523a', text: '#7dd4a8' },
+  },
   vertex: {
     light: { bg: '#e4edfd', text: '#2b5fbc' },
     dark: { bg: '#1a3d80', text: '#89b3f7' },
@@ -196,5 +200,14 @@ export const CODEX_REQUEST_HEADERS = {
 export const KIMI_USAGE_URL = 'https://api.kimi.com/coding/v1/usages';
 
 export const KIMI_REQUEST_HEADERS = {
+  Authorization: 'Bearer $TOKEN$',
+};
+
+// Kiro API configuration
+export const KIRO_USAGE_URL = 'https://codewhisperer.us-east-1.amazonaws.com';
+
+export const KIRO_REQUEST_HEADERS = {
+  'Content-Type': 'application/x-amz-json-1.0',
+  'x-amz-target': 'AmazonCodeWhispererService.GetUsageLimits',
   Authorization: 'Bearer $TOKEN$',
 };

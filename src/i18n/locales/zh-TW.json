@@ -722,6 +722,19 @@
     "limit_index": "限額 #{{index}}",
     "reset_hint": "{{hint}} 後重置"
   },
+  "kiro_quota": {
+    "title": "Kiro 配額",
+    "empty_title": "暫無 Kiro 驗證",
+    "empty_desc": "上傳 Kiro 驗證檔案後即可查看配額。",
+    "idle": "點擊此處重新整理配額",
+    "loading": "正在載入配額...",
+    "load_failed": "配額取得失敗：{{message}}",
+    "missing_auth_index": "驗證檔案缺少 auth_index",
+    "empty_data": "暫無配額資料",
+    "plan_label": "訂閱：",
+    "overage_label": "超額使用",
+    "overage_info": "${{charges}}（費率：${{rate}}/點數，上限：{{cap}}）"
+  },
   "vertex_import": {
     "title": "Vertex JSON 登入",
     "description": "上傳 Google 服務帳號 JSON，使用 CLI vertex-import 同步規則寫入 auth-dir/vertex-<project>.json。",

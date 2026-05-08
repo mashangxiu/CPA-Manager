@@ -306,3 +306,69 @@ export interface KimiQuotaState {
   error?: string;
   errorStatus?: number;
 }
+
+// Kiro API payload types
+export interface KiroUsageBreakdown {
+  resourceType?: string;
+  displayName?: string;
+  displayNamePlural?: string;
+  currentUsage?: number;
+  currentUsageWithPrecision?: number;
+  usageLimit?: number;
+  usageLimitWithPrecision?: number;
+  overageCap?: number;
+  overageCapWithPrecision?: number;
+  overageRate?: number;
+  overageCharges?: number;
+  currentOverages?: number;
+  currentOveragesWithPrecision?: number;
+  nextDateReset?: number;
+  unit?: string;
+  currency?: string;
+  bonuses?: unknown[];
+}
+
+export interface KiroSubscriptionInfo {
+  subscriptionTitle?: string;
+  type?: string;
+  overageCapability?: string;
+  upgradeCapability?: string;
+  subscriptionManagementTarget?: string;
+}
+
+export interface KiroUsagePayload {
+  daysUntilReset?: number;
+  nextDateReset?: number;
+  limits?: unknown[];
+  overageConfiguration?: {
+    overageStatus?: string;
+  };
+  subscriptionInfo?: KiroSubscriptionInfo;
+  usageBreakdownList?: KiroUsageBreakdown[];
+  userInfo?: {
+    userId?: string;
+  };
+}
+
+export interface KiroQuotaRow {
+  id: string;
+  label: string;
+  currentUsage: number;
+  usageLimit: number;
+  overageCap: number;
+  overageRate: number;
+  overageCharges: number;
+  currentOverages: number;
+  nextDateReset?: number;
+  resourceType?: string;
+  unit?: string;
+}
+
+export interface KiroQuotaState {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  rows: KiroQuotaRow[];
+  planType?: string | null;
+  overageEnabled?: boolean;
+  error?: string;
+  errorStatus?: number;
+}

@@ -719,6 +719,19 @@
     "limit_index": "Лимит #{{index}}",
     "reset_hint": "сброс через {{hint}}"
   },
+  "kiro_quota": {
+    "title": "Квота Kiro",
+    "empty_title": "Файлы авторизации Kiro отсутствуют",
+    "empty_desc": "Загрузите учётные данные Kiro для просмотра оставшейся квоты.",
+    "idle": "Нажмите для обновления квоты",
+    "loading": "Загрузка квоты...",
+    "load_failed": "Не удалось загрузить квоту: {{message}}",
+    "missing_auth_index": "В файле авторизации отсутствует auth_index",
+    "empty_data": "Данные по квоте отсутствуют",
+    "plan_label": "Подписка: ",
+    "overage_label": "Превышение",
+    "overage_info": "${{charges}} (тариф: ${{rate}}/кредит, лимит: {{cap}})"
+  },
   "vertex_import": {
     "title": "Вход с Vertex JSON",
     "description": "Загрузите JSON ключа сервисного аккаунта Google, чтобы сохранить его как auth-dir/vertex-<project>.json по тем же правилам, что и помощник CLI vertex-import.",

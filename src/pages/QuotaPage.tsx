@@ -16,7 +16,8 @@ import {
   CLAUDE_CONFIG,
   CODEX_CONFIG,
   GEMINI_CLI_CONFIG,
-  KIMI_CONFIG
+  KIMI_CONFIG,
+  KIRO_CONFIG
 } from '@/components/quota';
 import type { QuotaSortMode } from '@/components/quota/quotaConfigs';
 import type { AuthFileItem } from '@/types';
@@ -146,6 +147,14 @@ export function QuotaPage() {
       />
       <QuotaSection
         config={KIMI_CONFIG}
+        files={files}
+        loading={loading}
+        disabled={disableControls}
+        searchQuery={searchQuery}
+        sortMode={sortMode}
+      />
+      <QuotaSection
+        config={KIRO_CONFIG}
         files={files}
         loading={loading}
         disabled={disableControls}
