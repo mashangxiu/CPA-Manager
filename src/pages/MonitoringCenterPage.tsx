@@ -29,11 +29,13 @@ import {
 } from '@/components/ui/icons';
 import {
   buildAccountRows,
+  buildKeyRows,
   buildMonitoringSummary,
   buildRealtimeMonitorRows,
   useMonitoringData,
   type MonitoringAccountRow,
   type MonitoringEventRow,
+  type MonitoringKeyRow,
   type MonitoringStatusTone,
   type MonitoringTimeRange,
 } from '@/features/monitoring/hooks/useMonitoringData';
@@ -1213,6 +1215,7 @@ export function MonitoringCenterPage() {
 
   const scopedSummary = useMemo(() => buildMonitoringSummary(scopedStatsRows), [scopedStatsRows]);
   const accountRows = useMemo(() => buildAccountRows(scopedRows), [scopedRows]);
+  const keyRows = useMemo(() => buildKeyRows(scopedRows), [scopedRows]);
   const sortedAccountRows = useMemo(() => {
     const directionFactor = accountSort.direction === 'desc' ? -1 : 1;
 
@@ -2112,6 +2115,65 @@ export function MonitoringCenterPage() {
           onPageSizeChange={handleAccountPageSizeChange}
           t={t}
         />
+      </Panel>
+
+      <Panel
+        title={t('monitoring.key_consumption_title', 'Key 消耗汇总')}
+        subtitle={t('monitoring.key_consumption_desc', '按凭证索引统计各 Key 的总消耗量')}
+        className={styles.accountPanel}
+      >
+        <div className={styles.tableWrapper}>
+          <table className={`${styles.table} ${styles.accountOverviewTable}`}>
+            <thead>
+              <tr>
+                <th>{t('monitoring.key_auth_index', 'Key 索引')}</th>
+                <th>{t('monitoring.key_auth_label', '认证标签')}</th>
+                <th>{t('monitoring.total_calls', '总调用')}</th>
+                <th>{t('monitoring.success_calls', '成功')}</th>
+                <th>{t('monitoring.failure_calls', '失败')}</th>
+                <th>{t('monitoring.success_rate', '成功率')}</th>
+                <th>{t('monitoring.input_tokens', 'Input Tokens')}</th>
+                <th>{t('monitoring.output_tokens', 'Output Tokens')}</th>
+                <th>{t('monitoring.total_tokens', 'Total Tokens')}</th>
+                <th>{t('monitoring.estimated_cost', '费用')}</th>
+                <th>{t('monitoring.last_request_time', '最后请求')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keyRows.length > 0 ? (
+                keyRows.map((row: MonitoringKeyRow) => (
+                  <tr key={row.authIndex || '-'}>
+                    <td>
+                      <code>{row.authIndexMasked || '-'}</code>
+                    </td>
+                    <td>{row.authLabel || '-'}</td>
+                    <td>{row.totalCalls.toLocaleString()}</td>
+                    <td>{row.successCalls.toLocaleString()}</td>
+                    <td>{row.failureCalls.toLocaleString()}</td>
+                    <td>{(row.successRate * 100).toFixed(1)}%</td>
+                    <td>{row.inputTokens.toLocaleString()}</td>
+                    <td>{row.outputTokens.toLocaleString()}</td>
+                    <td>{row.totalTokens.toLocaleString()}</td>
+                    <td>{row.totalCost > 0 ? `$${row.totalCost.toFixed(4)}` : '-'}</td>
+                    <td>
+                      {row.lastSeenAt > 0
+                        ? new Date(row.lastSeenAt).toLocaleString(i18n.language)
+                        : '-'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={11}>
+                    <div className={styles.emptyTable}>
+                      {hasSearchFilter ? t('monitoring.no_filtered_data') : t('monitoring.no_data')}
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </Panel>
 
       <Panel

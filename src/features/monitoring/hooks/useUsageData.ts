@@ -41,6 +41,8 @@ export function useUsageData(): UseUsageDataReturn {
   const managementKey = useAuthStore((state) => state.managementKey);
   const usageServiceEnabled = useUsageServiceStore((state) => state.enabled);
   const usageServiceBase = useUsageServiceStore((state) => state.serviceBase);
+  const usageServiceKey = useUsageServiceStore((state) => state.managementKey);
+  const effectiveKey = usageServiceEnabled && usageServiceKey ? usageServiceKey : managementKey;
   const [usage, setUsage] = useState<UsagePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -80,8 +82,8 @@ export function useUsageData(): UseUsageDataReturn {
     if (!serviceBase) {
       return { prices: {} };
     }
-    return usageServiceApi.getModelPrices(serviceBase, managementKey);
-  }, [managementKey, resolveUsageServiceBase]);
+    return usageServiceApi.getModelPrices(serviceBase, effectiveKey);
+  }, [effectiveKey, resolveUsageServiceBase]);
 
   const saveModelPricesToApi = useCallback(
     async (prices: Record<string, ModelPrice>): Promise<ModelPricesResponse> => {
@@ -89,9 +91,9 @@ export function useUsageData(): UseUsageDataReturn {
       if (!serviceBase) {
         throw new Error('model_price_api_unavailable');
       }
-      return usageServiceApi.saveModelPrices(serviceBase, prices, managementKey);
+      return usageServiceApi.saveModelPrices(serviceBase, prices, effectiveKey);
     },
-    [managementKey, resolveUsageServiceBase]
+    [effectiveKey, resolveUsageServiceBase]
   );
 
   const syncModelPricesFromApi = useCallback(async (models?: string[]): Promise<ModelPriceSyncResponse> => {
@@ -99,24 +101,24 @@ export function useUsageData(): UseUsageDataReturn {
     if (!serviceBase) {
       throw new Error('model_price_sync_requires_usage_service');
     }
-    return usageServiceApi.syncModelPrices(serviceBase, managementKey, models);
-  }, [managementKey, resolveUsageServiceBase]);
+    return usageServiceApi.syncModelPrices(serviceBase, effectiveKey, models);
+  }, [effectiveKey, resolveUsageServiceBase]);
 
   const exportUsageFromApi = useCallback(async (): Promise<UsageExportResponse> => {
     const serviceBase = await resolveUsageServiceBase();
     if (!serviceBase) {
       throw new Error('usage_import_export_requires_usage_service');
     }
-    return usageServiceApi.exportUsage(serviceBase, managementKey);
-  }, [managementKey, resolveUsageServiceBase]);
+    return usageServiceApi.exportUsage(serviceBase, effectiveKey);
+  }, [effectiveKey, resolveUsageServiceBase]);
 
   const importUsageToApi = useCallback(async (file: File): Promise<UsageImportResponse> => {
     const serviceBase = await resolveUsageServiceBase();
     if (!serviceBase) {
       throw new Error('usage_import_export_requires_usage_service');
     }
-    return usageServiceApi.importUsage(serviceBase, file, managementKey);
-  }, [managementKey, resolveUsageServiceBase]);
+    return usageServiceApi.importUsage(serviceBase, file, effectiveKey);
+  }, [effectiveKey, resolveUsageServiceBase]);
 
   const loadModelPricesFromStorage = useCallback(async () => {
     const fallbackPrices = loadModelPrices();
@@ -149,7 +151,7 @@ export function useUsageData(): UseUsageDataReturn {
     try {
       const payload =
         usageServiceEnabled && usageServiceBase
-          ? await usageServiceApi.getUsage(usageServiceBase, managementKey)
+          ? await usageServiceApi.getUsage(usageServiceBase, effectiveKey)
           : await apiClient.get<UsagePayload>('/usage');
       if (requestIdRef.current !== requestId) return;
       setUsage(payload ?? null);
@@ -162,7 +164,7 @@ export function useUsageData(): UseUsageDataReturn {
         setLoading(false);
       }
     }
-  }, [managementKey, usageServiceBase, usageServiceEnabled]);
+  }, [effectiveKey, usageServiceBase, usageServiceEnabled]);
 
   useEffect(() => {
     void loadModelPricesFromStorage();

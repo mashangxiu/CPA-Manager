@@ -205,6 +205,22 @@ export type MonitoringModelRow = {
   channels: number;
 };
 
+export type MonitoringKeyRow = {
+  authIndex: string;
+  authIndexMasked: string;
+  authLabel: string;
+  totalCalls: number;
+  successCalls: number;
+  failureCalls: number;
+  successRate: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  totalTokens: number;
+  totalCost: number;
+  lastSeenAt: number;
+};
+
 export type MonitoringFailureSourceRow = {
   id: string;
   label: string;
@@ -795,6 +811,62 @@ export const buildAccountRows = (rows: MonitoringEventRow[]): MonitoringAccountR
         right.totalCalls - left.totalCalls ||
         right.totalCost - left.totalCost
     );
+};
+
+export const buildKeyRows = (rows: MonitoringEventRow[]): MonitoringKeyRow[] => {
+  const grouped = new Map<
+    string,
+    {
+      authIndex: string;
+      authIndexMasked: string;
+      authLabel: string;
+      totalCalls: number;
+      successCalls: number;
+      failureCalls: number;
+      inputTokens: number;
+      outputTokens: number;
+      cachedTokens: number;
+      totalTokens: number;
+      totalCost: number;
+      lastSeenAt: number;
+    }
+  >();
+
+  rows.forEach((row) => {
+    const key = row.authIndex || '-';
+    const existing = grouped.get(key) ?? {
+      authIndex: row.authIndex,
+      authIndexMasked: row.authIndexMasked,
+      authLabel: row.authLabel,
+      totalCalls: 0,
+      successCalls: 0,
+      failureCalls: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedTokens: 0,
+      totalTokens: 0,
+      totalCost: 0,
+      lastSeenAt: 0,
+    };
+
+    existing.totalCalls += 1;
+    existing.successCalls += row.failed ? 0 : 1;
+    existing.failureCalls += row.failed ? 1 : 0;
+    existing.inputTokens += row.inputTokens;
+    existing.outputTokens += row.outputTokens;
+    existing.cachedTokens += row.cachedTokens;
+    existing.totalTokens += row.totalTokens;
+    existing.totalCost += row.totalCost;
+    existing.lastSeenAt = Math.max(existing.lastSeenAt, row.timestampMs);
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.values())
+    .map((item) => ({
+      ...item,
+      successRate: item.totalCalls > 0 ? item.successCalls / item.totalCalls : 1,
+    }))
+    .sort((a, b) => b.totalTokens - a.totalTokens || b.totalCalls - a.totalCalls);
 };
 
 export const buildRealtimeMonitorRows = (rows: MonitoringEventRow[]): MonitoringRealtimeRow[] => {

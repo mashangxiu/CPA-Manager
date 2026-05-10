@@ -6,7 +6,8 @@ import { normalizeUsageServiceBase } from '@/services/api/usageService';
 export interface UsageServiceStoreState {
   enabled: boolean;
   serviceBase: string;
-  setUsageServiceConfig: (config: { enabled: boolean; serviceBase: string }) => void;
+  managementKey: string;
+  setUsageServiceConfig: (config: { enabled: boolean; serviceBase: string; managementKey?: string }) => void;
   clearUsageServiceConfig: () => void;
 }
 
@@ -15,13 +16,15 @@ export const useUsageServiceStore = create<UsageServiceStoreState>()(
     (set) => ({
       enabled: false,
       serviceBase: '',
-      setUsageServiceConfig: ({ enabled, serviceBase }) => {
+      managementKey: '',
+      setUsageServiceConfig: ({ enabled, serviceBase, managementKey = '' }) => {
         set({
           enabled,
           serviceBase: enabled ? normalizeUsageServiceBase(serviceBase) : '',
+          managementKey: enabled ? managementKey : '',
         });
       },
-      clearUsageServiceConfig: () => set({ enabled: false, serviceBase: '' }),
+      clearUsageServiceConfig: () => set({ enabled: false, serviceBase: '', managementKey: '' }),
     }),
     {
       name: 'cli-proxy-usage-service',
@@ -40,6 +43,7 @@ export const useUsageServiceStore = create<UsageServiceStoreState>()(
       partialize: (state) => ({
         enabled: state.enabled,
         serviceBase: state.serviceBase,
+        managementKey: state.managementKey,
       }),
     }
   )

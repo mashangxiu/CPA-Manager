@@ -86,6 +86,7 @@ export function SystemPage() {
   const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
   const usageServiceEnabled = useUsageServiceStore((state) => state.enabled);
   const usageServiceBase = useUsageServiceStore((state) => state.serviceBase);
+  const usageServiceKey = useUsageServiceStore((state) => state.managementKey);
   const setUsageServiceConfig = useUsageServiceStore((state) => state.setUsageServiceConfig);
 
   const models = useModelsStore((state) => state.models);
@@ -105,6 +106,7 @@ export function SystemPage() {
   const [checkingVersion, setCheckingVersion] = useState(false);
   const [usageServiceDraftEnabled, setUsageServiceDraftEnabled] = useState(usageServiceEnabled);
   const [usageServiceDraftBase, setUsageServiceDraftBase] = useState(usageServiceBase);
+  const [usageServiceDraftKey, setUsageServiceDraftKey] = useState(usageServiceKey);
   const [usageServiceStatus, setUsageServiceStatus] = useState<UsageServiceStatus | null>(null);
   const [usageServiceSaving, setUsageServiceSaving] = useState(false);
   const [usageServiceChecking, setUsageServiceChecking] = useState(false);
@@ -423,7 +425,7 @@ export function SystemPage() {
         cpaBaseUrl: auth.apiBase,
         managementKey: auth.managementKey,
       });
-      setUsageServiceConfig({ enabled: true, serviceBase: normalized });
+      setUsageServiceConfig({ enabled: true, serviceBase: normalized, managementKey: usageServiceDraftKey.trim() });
       const status = await usageServiceApi.getStatus(normalized, auth.managementKey);
       setUsageServiceStatus(status);
       showNotification(
@@ -448,6 +450,7 @@ export function SystemPage() {
     t,
     usageServiceDraftBase,
     usageServiceDraftEnabled,
+    usageServiceDraftKey,
   ]);
 
   useEffect(() => {
@@ -459,7 +462,8 @@ export function SystemPage() {
   useEffect(() => {
     setUsageServiceDraftEnabled(usageServiceEnabled);
     setUsageServiceDraftBase(usageServiceBase);
-  }, [usageServiceBase, usageServiceEnabled]);
+    setUsageServiceDraftKey(usageServiceKey);
+  }, [usageServiceBase, usageServiceEnabled, usageServiceKey]);
 
   useEffect(() => {
     if (requestLogModalOpen && !requestLogTouched) {
@@ -708,6 +712,14 @@ export function SystemPage() {
               onChange={(event) => setUsageServiceDraftBase(event.target.value)}
               disabled={!usageServiceDraftEnabled}
             />
+            <Input
+              label={t('usage_service.key_label', { defaultValue: 'Management Key' })}
+              placeholder={t('usage_service.key_placeholder', { defaultValue: '留空则使用主 API 密钥' })}
+              value={usageServiceDraftKey}
+              onChange={(event) => setUsageServiceDraftKey(event.target.value)}
+              disabled={!usageServiceDraftEnabled}
+              type="password"
+            />
             {usageServiceStatus ? (
               <div className={styles.usageServiceStatusGrid}>
                 <div>
@@ -752,6 +764,7 @@ export function SystemPage() {
                 onClick={() => {
                   setUsageServiceDraftEnabled(usageServiceEnabled);
                   setUsageServiceDraftBase(usageServiceBase);
+                  setUsageServiceDraftKey(usageServiceKey);
                 }}
                 disabled={usageServiceSaving}
               >
