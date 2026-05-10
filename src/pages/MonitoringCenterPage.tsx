@@ -43,6 +43,7 @@ import { useUsageData } from '@/features/monitoring/hooks/useUsageData';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useInterval } from '@/hooks/useInterval';
 import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
+import { apiKeysApi } from '@/services/api/apiKeys';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type {
   AuthFileItem,
@@ -1034,6 +1035,7 @@ export function MonitoringCenterPage() {
   const [syncingPrices, setSyncingPrices] = useState(false);
   const [usageExporting, setUsageExporting] = useState(false);
   const [usageImporting, setUsageImporting] = useState(false);
+  const [apiKeyHashMap, setApiKeyHashMap] = useState<Map<string, string>>(new Map());
   const [priceModel, setPriceModel] = useState('');
   const [priceDraft, setPriceDraft] = useState<PriceDraft>(() => createPriceDraft());
   const [accountQuotaStates, setAccountQuotaStates] = useState<Record<string, AccountQuotaState>>(
@@ -1081,6 +1083,23 @@ export function MonitoringCenterPage() {
   const refreshAll = useCallback(async () => {
     await Promise.all([loadUsage(), refreshMeta(false)]);
   }, [loadUsage, refreshMeta]);
+
+  // Load API keys and build hash→masked-key lookup map
+  useEffect(() => {
+    if (connectionStatus !== 'connected') return;
+    apiKeysApi.list().then((keys) => {
+      const entries: Array<[string, string]> = [];
+      const promises = keys.map(async (key) => {
+        const encoded = new TextEncoder().encode(key.trim());
+        const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+        const hashHex = Array.from(new Uint8Array(hashBuffer))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+        entries.push([hashHex, key.slice(0, 8) + '...' + key.slice(-4)]);
+      });
+      Promise.all(promises).then(() => setApiKeyHashMap(new Map(entries)));
+    }).catch(() => {});
+  }, [connectionStatus]);
 
   useHeaderRefresh(refreshAll);
   useInterval(
@@ -2141,9 +2160,9 @@ export function MonitoringCenterPage() {
             <tbody>
               {keyRows.length > 0 ? (
                 keyRows.map((row: MonitoringKeyRow) => (
-                  <tr key={row.authIndex || '-'}>
+                  <tr key={row.apiKeyHash || '-'}>
                     <td>
-                      <code>{row.authLabel || row.authIndexMasked || '-'}</code>
+                      <code>{apiKeyHashMap.get(row.apiKeyHash) ?? (row.apiKeyHash ? row.apiKeyHash.slice(0, 8) + '...' : '-')}</code>
                     </td>
                     <td>{row.totalCalls.toLocaleString()}</td>
                     <td>{row.successCalls.toLocaleString()}</td>

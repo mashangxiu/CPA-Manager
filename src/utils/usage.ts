@@ -24,6 +24,7 @@ export interface UsageDetail {
   timestamp: string;
   source: string;
   auth_index: string | number | null;
+  api_key_hash?: string;
   latency_ms?: number;
   tokens: UsageTokens;
   failed: boolean;

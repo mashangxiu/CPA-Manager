@@ -206,9 +206,7 @@ export type MonitoringModelRow = {
 };
 
 export type MonitoringKeyRow = {
-  authIndex: string;
-  authIndexMasked: string;
-  authLabel: string;
+  apiKeyHash: string;
   totalCalls: number;
   successCalls: number;
   failureCalls: number;
@@ -281,6 +279,7 @@ export type MonitoringEventRow = {
   authIndex: string;
   authIndexMasked: string;
   authLabel: string;
+  apiKeyHash: string;
   provider: string;
   planType: string;
   channel: string;
@@ -817,9 +816,7 @@ export const buildKeyRows = (rows: MonitoringEventRow[]): MonitoringKeyRow[] => 
   const grouped = new Map<
     string,
     {
-      authIndex: string;
-      authIndexMasked: string;
-      authLabel: string;
+      apiKeyHash: string;
       totalCalls: number;
       successCalls: number;
       failureCalls: number;
@@ -833,11 +830,9 @@ export const buildKeyRows = (rows: MonitoringEventRow[]): MonitoringKeyRow[] => 
   >();
 
   rows.forEach((row) => {
-    const key = row.authIndex || '-';
+    const key = row.apiKeyHash || '-';
     const existing = grouped.get(key) ?? {
-      authIndex: row.authIndex,
-      authIndexMasked: row.authIndexMasked,
-      authLabel: row.authLabel,
+      apiKeyHash: row.apiKeyHash,
       totalCalls: 0,
       successCalls: 0,
       failureCalls: 0,
@@ -1406,6 +1401,7 @@ const buildEventRows = (
         authIndex,
         authIndexMasked: maskAuthIndex(authIndex),
         authLabel: authMeta?.label || sourceMasked,
+        apiKeyHash: readString(detail.api_key_hash),
         provider: authMeta?.provider || sourceMeta.type || '-',
         planType: authMeta?.planType || '-',
         channel: channelLabel,
