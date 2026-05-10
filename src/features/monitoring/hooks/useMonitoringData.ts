@@ -206,9 +206,9 @@ export type MonitoringModelRow = {
 };
 
 export type MonitoringKeyRow = {
-  authIndex: string;
-  authIndexMasked: string;
-  authLabel: string;
+  sourceKey: string;
+  source: string;
+  sourceMasked: string;
   totalCalls: number;
   successCalls: number;
   failureCalls: number;
@@ -817,9 +817,9 @@ export const buildKeyRows = (rows: MonitoringEventRow[]): MonitoringKeyRow[] => 
   const grouped = new Map<
     string,
     {
-      authIndex: string;
-      authIndexMasked: string;
-      authLabel: string;
+      sourceKey: string;
+      source: string;
+      sourceMasked: string;
       totalCalls: number;
       successCalls: number;
       failureCalls: number;
@@ -833,11 +833,11 @@ export const buildKeyRows = (rows: MonitoringEventRow[]): MonitoringKeyRow[] => 
   >();
 
   rows.forEach((row) => {
-    const key = row.authIndex || '-';
+    const key = row.sourceKey || '-';
     const existing = grouped.get(key) ?? {
-      authIndex: row.authIndex,
-      authIndexMasked: row.authIndexMasked,
-      authLabel: row.authLabel,
+      sourceKey: row.sourceKey,
+      source: row.source,
+      sourceMasked: row.sourceMasked,
       totalCalls: 0,
       successCalls: 0,
       failureCalls: 0,

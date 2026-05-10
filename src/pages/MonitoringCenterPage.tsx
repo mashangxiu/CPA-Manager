@@ -2126,8 +2126,7 @@ export function MonitoringCenterPage() {
           <table className={`${styles.table} ${styles.accountOverviewTable}`}>
             <thead>
               <tr>
-                <th>{t('monitoring.key_auth_index', 'Key 索引')}</th>
-                <th>{t('monitoring.key_auth_label', '认证标签')}</th>
+                <th>{t('monitoring.key_source', 'API Key')}</th>
                 <th>{t('monitoring.total_calls', '总调用')}</th>
                 <th>{t('monitoring.success_calls', '成功')}</th>
                 <th>{t('monitoring.failure_calls', '失败')}</th>
@@ -2142,11 +2141,10 @@ export function MonitoringCenterPage() {
             <tbody>
               {keyRows.length > 0 ? (
                 keyRows.map((row: MonitoringKeyRow) => (
-                  <tr key={row.authIndex || '-'}>
+                  <tr key={row.sourceKey || '-'}>
                     <td>
-                      <code>{row.authIndexMasked || '-'}</code>
+                      <code>{row.sourceMasked || '-'}</code>
                     </td>
-                    <td>{row.authLabel || '-'}</td>
                     <td>{row.totalCalls.toLocaleString()}</td>
                     <td>{row.successCalls.toLocaleString()}</td>
                     <td>{row.failureCalls.toLocaleString()}</td>
