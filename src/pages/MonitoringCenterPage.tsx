@@ -2141,9 +2141,9 @@ export function MonitoringCenterPage() {
             <tbody>
               {keyRows.length > 0 ? (
                 keyRows.map((row: MonitoringKeyRow) => (
-                  <tr key={row.sourceKey || '-'}>
+                  <tr key={row.authIndex || '-'}>
                     <td>
-                      <code>{row.sourceMasked || '-'}</code>
+                      <code>{row.authLabel || row.authIndexMasked || '-'}</code>
                     </td>
                     <td>{row.totalCalls.toLocaleString()}</td>
                     <td>{row.successCalls.toLocaleString()}</td>
